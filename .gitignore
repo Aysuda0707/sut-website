@@ -37,3 +37,8 @@ yarn-error.log*
 # Built-in admin: uploaded media (keep the folder, ignore its contents)
 /public/uploads/*
 !/public/uploads/.gitkeep
+.env*
+
+# Local scratch / test artefacts (never commit)
+cookies.txt
+*.tmp

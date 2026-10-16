@@ -2,22 +2,21 @@
  * POST /api/admin/upload
  *
  * Accepts a single file (photo, audio, or video) as multipart/form-data,
- * validates its type and size, writes it to `public/uploads/`, and records a
- * MediaAsset in the content store. Returns the created asset.
+ * validates its type and size, stores it (Vercel Blob in production, local
+ * disk elsewhere), and records a MediaAsset in the content store. Returns the
+ * created asset.
  *
  * Validation mirrors the limits documented in docs/PHASE-4-MEDIA-PIPELINE.md.
  */
 
-import { promises as fs } from "node:fs";
 import path from "node:path";
 import { NextResponse } from "next/server";
 import { isAuthenticated } from "@/lib/auth";
 import { addMedia, newId } from "@/lib/store";
+import { saveUpload } from "@/lib/storage";
 import type { MediaAsset } from "@/lib/types";
 
 export const runtime = "nodejs";
-
-const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads");
 
 const IMAGE_TYPES = [
   "image/jpeg",
@@ -188,16 +187,25 @@ export async function POST(request: Request) {
   const ext = safeExtension(file.name, mime);
   const filename = `${id}${ext}`;
 
-  await fs.mkdir(UPLOAD_DIR, { recursive: true });
   const buffer = Buffer.from(await file.arrayBuffer());
-  await fs.writeFile(path.join(UPLOAD_DIR, filename), buffer);
+
+  let stored;
+  try {
+    stored = await saveUpload(filename, buffer, mime);
+  } catch (err) {
+    console.error("upload: failed to store file", err);
+    return NextResponse.json(
+      { error: "ذخیره‌سازی فایل ناموفق بود." },
+      { status: 500 },
+    );
+  }
 
   const title = (form.get("title") as string) || file.name;
   const alt = (form.get("alt") as string) || title;
 
   const asset: MediaAsset = {
     id,
-    url: `/uploads/${filename}`,
+    url: stored.url,
     title,
     alt,
     mediaType: kind,

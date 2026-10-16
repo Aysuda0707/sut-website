@@ -7,8 +7,6 @@
  * Requires an authenticated admin session.
  */
 
-import { promises as fs } from "node:fs";
-import path from "node:path";
 import { NextResponse } from "next/server";
 import { isAuthenticated } from "@/lib/auth";
 import {
@@ -17,6 +15,7 @@ import {
   upsertRecord,
   type CollectionName,
 } from "@/lib/store";
+import { deleteUploadByUrl } from "@/lib/storage";
 import type { MediaAsset } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -75,20 +74,12 @@ export async function PATCH(
 }
 
 /**
- * Best-effort removal of the physical file backing a media asset. Only files
- * inside `public/uploads/` are touched, and the resolved path is checked to
- * stay within that directory (defence against path traversal).
+ * Best-effort removal of the file backing a media asset. Handles both local
+ * `/uploads/...` files and absolute Vercel Blob URLs; the storage layer
+ * applies its own path-traversal guard for local files.
  */
 async function removeUploadedFile(asset: MediaAsset): Promise<void> {
-  if (!asset.url?.startsWith("/uploads/")) return;
-  const uploadsDir = path.join(process.cwd(), "public", "uploads");
-  const target = path.resolve(uploadsDir, path.basename(asset.url));
-  if (!target.startsWith(path.resolve(uploadsDir))) return;
-  try {
-    await fs.unlink(target);
-  } catch {
-    // File already gone or unreadable — nothing to do.
-  }
+  await deleteUploadByUrl(asset.url);
 }
 
 export async function DELETE(
