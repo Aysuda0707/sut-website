@@ -43,7 +43,10 @@ function mediaRemotePatterns(): NonNullable<NextConfig["images"]>["remotePattern
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   // Emit a self-contained server bundle for the production Docker image.
-  output: "standalone",
+  // Only enable this for self-hosted/Docker builds. On Vercel the platform
+  // manages the output itself, and "standalone" causes a 404 NOT_FOUND.
+  // Set NEXT_OUTPUT_STANDALONE=1 (see Dockerfile) to opt in.
+  output: process.env.NEXT_OUTPUT_STANDALONE === "1" ? "standalone" : undefined,
   // Persian-first: the site is RTL by default. Individual English fragments
   // are marked with dir="ltr" where needed.
   images: {
