@@ -1,0 +1,528 @@
+# =============================================================================
+# Directus schema snapshot — Azerbaijan Student Group Archive
+#
+# Apply with:
+#   docker compose exec directus npx directus schema apply /directus/snapshots/schema.yaml
+#
+# This file is the reproducible source of truth for the data model described in
+# docs/PHASE-1-ARCHITECTURE.md. It defines collections, fields, relations, and
+# indexes. Directus system collections (directus_*) are managed automatically.
+# =============================================================================
+
+version: 1
+directus: 12.5.0
+vendor: postgres
+
+collections:
+  # --- Taxonomy -------------------------------------------------------------
+  - collection: categories
+    meta:
+      icon: category
+      note: "دسته‌بندی محتوا"
+      display_template: "{{ name }}"
+      sort_field: name
+      archive_field: null
+    schema:
+      name: categories
+    fields:
+      - field: id
+        type: uuid
+        meta: { hidden: true, readonly: true, interface: input, special: [uuid] }
+        schema: { is_primary_key: true, has_auto_increment: false }
+      - field: status
+        type: string
+        meta: { interface: select-dropdown, options: { choices: [{ text: "منتشرشده", value: published }, { text: "پیش‌نویس", value: draft }, { text: "بایگانی", value: archived }] } }
+        schema: { default_value: published }
+      - field: slug
+        type: string
+        meta: { interface: input, required: true, note: "شناسه یکتا (a-z, 0-9, -)" }
+        schema: { is_unique: true, is_indexed: true }
+      - field: name
+        type: string
+        meta: { interface: input, required: true }
+      - field: description
+        type: text
+        meta: { interface: input-multiline }
+
+  - collection: tags
+    meta:
+      icon: sell
+      note: "برچسب‌ها"
+      display_template: "{{ name }}"
+      sort_field: name
+    schema:
+      name: tags
+    fields:
+      - field: id
+        type: uuid
+        meta: { hidden: true, readonly: true, special: [uuid] }
+        schema: { is_primary_key: true }
+      - field: slug
+        type: string
+        meta: { interface: input, required: true }
+        schema: { is_unique: true, is_indexed: true }
+      - field: name
+        type: string
+        meta: { interface: input, required: true }
+
+  - collection: event_types
+    meta:
+      icon: event
+      note: "انواع رویداد"
+      display_template: "{{ name }}"
+      sort_field: name
+    schema:
+      name: event_types
+    fields:
+      - field: id
+        type: uuid
+        meta: { hidden: true, readonly: true, special: [uuid] }
+        schema: { is_primary_key: true }
+      - field: slug
+        type: string
+        meta: { interface: input, required: true }
+        schema: { is_unique: true, is_indexed: true }
+      - field: name
+        type: string
+        meta: { interface: input, required: true }
+
+  - collection: contributors
+    meta:
+      icon: person
+      note: "همکاران و عوامل"
+      display_template: "{{ name }}"
+      sort_field: name
+    schema:
+      name: contributors
+    fields:
+      - field: id
+        type: uuid
+        meta: { hidden: true, readonly: true, special: [uuid] }
+        schema: { is_primary_key: true }
+      - field: name
+        type: string
+        meta: { interface: input, required: true }
+      - field: role
+        type: string
+        meta: { interface: input, note: "نقش (مثلاً گوینده، تدوین)" }
+
+  # --- Content --------------------------------------------------------------
+  - collection: events
+    meta:
+      icon: celebration
+      note: "رویدادها"
+      display_template: "{{ title }}"
+      sort_field: event_date
+      archive_field: status
+      archive_value: archived
+      unarchive_value: published
+    schema:
+      name: events
+    fields:
+      - field: id
+        type: uuid
+        meta: { hidden: true, readonly: true, special: [uuid] }
+        schema: { is_primary_key: true }
+      - field: status
+        type: string
+        meta: { interface: select-dropdown, options: { choices: [{ text: "منتشرشده", value: published }, { text: "پیش‌نویس", value: draft }, { text: "بایگانی", value: archived }] } }
+        schema: { default_value: draft, is_indexed: true }
+      - field: slug
+        type: string
+        meta: { interface: input, required: true, note: "پس از انتشار تغییر ندهید" }
+        schema: { is_unique: true, is_indexed: true }
+      - field: title
+        type: string
+        meta: { interface: input, required: true }
+      - field: event_type
+        type: uuid
+        meta: { interface: select-dropdown-m2o, special: [m2o], display_template: "{{ name }}" }
+        schema: { is_indexed: true }
+      - field: event_date
+        type: date
+        meta: { interface: datetime, required: true }
+        schema: { is_indexed: true }
+      - field: archive_year
+        type: integer
+        meta: { interface: input, required: true, note: "سال شمسی (ساختاریافته)" }
+        schema: { is_indexed: true }
+      - field: location
+        type: string
+        meta: { interface: input }
+      - field: summary
+        type: text
+        meta: { interface: input-multiline, required: true }
+      - field: report_body
+        type: text
+        meta: { interface: input-rich-text-html }
+      - field: featured_image
+        type: uuid
+        meta: { interface: file-image, special: [file] }
+      - field: gallery
+        type: json
+        meta: { interface: list-m2m, special: [m2m], options: { template: "{{ file.title }}" } }
+      - field: organizers
+        type: json
+        meta: { interface: list-m2m, special: [m2m] }
+      - field: contributors
+        type: json
+        meta: { interface: list-m2m, special: [m2m] }
+      - field: categories
+        type: json
+        meta: { interface: list-m2m, special: [m2m] }
+      - field: tags
+        type: json
+        meta: { interface: list-m2m, special: [m2m] }
+      - field: featured_on_home
+        type: boolean
+        meta: { interface: boolean, note: "نمایش در صفحه اصلی" }
+        schema: { default_value: false }
+      - field: seo
+        type: json
+        meta: { interface: group-detail, options: { fields: [seo_title, seo_description, seo_og_image] } }
+      - field: seo_title
+        type: string
+        meta: { interface: input, width: half }
+      - field: seo_description
+        type: text
+        meta: { interface: input-multiline, width: half }
+      - field: seo_og_image
+        type: uuid
+        meta: { interface: file-image, special: [file], width: half }
+
+  - collection: articles
+    meta:
+      icon: article
+      note: "گزارش‌ها، یادداشت‌ها و روایت‌ها"
+      display_template: "{{ title }}"
+      sort_field: publish_date
+      archive_field: status
+      archive_value: archived
+      unarchive_value: published
+    schema:
+      name: articles
+    fields:
+      - field: id
+        type: uuid
+        meta: { hidden: true, readonly: true, special: [uuid] }
+        schema: { is_primary_key: true }
+      - field: status
+        type: string
+        meta: { interface: select-dropdown, options: { choices: [{ text: "منتشرشده", value: published }, { text: "پیش‌نویس", value: draft }, { text: "بایگانی", value: archived }] } }
+        schema: { default_value: draft, is_indexed: true }
+      - field: slug
+        type: string
+        meta: { interface: input, required: true }
+        schema: { is_unique: true, is_indexed: true }
+      - field: title
+        type: string
+        meta: { interface: input, required: true }
+      - field: author_display_name
+        type: string
+        meta: { interface: input, required: true }
+      - field: publish_date
+        type: date
+        meta: { interface: datetime, required: true }
+        schema: { is_indexed: true }
+      - field: summary
+        type: text
+        meta: { interface: input-multiline, required: true }
+      - field: body
+        type: text
+        meta: { interface: input-rich-text-html, required: true }
+      - field: featured_image
+        type: uuid
+        meta: { interface: file-image, special: [file] }
+      - field: inline_media
+        type: json
+        meta: { interface: list-m2m, special: [m2m] }
+      - field: related_events
+        type: json
+        meta: { interface: list-m2m, special: [m2m] }
+      - field: related_interviews
+        type: json
+        meta: { interface: list-m2m, special: [m2m] }
+      - field: related_podcasts
+        type: json
+        meta: { interface: list-m2m, special: [m2m] }
+      - field: categories
+        type: json
+        meta: { interface: list-m2m, special: [m2m] }
+      - field: tags
+        type: json
+        meta: { interface: list-m2m, special: [m2m] }
+      - field: seo
+        type: json
+        meta: { interface: group-detail }
+      - field: seo_title
+        type: string
+        meta: { interface: input, width: half }
+      - field: seo_description
+        type: text
+        meta: { interface: input-multiline, width: half }
+      - field: seo_og_image
+        type: uuid
+        meta: { interface: file-image, special: [file], width: half }
+
+  - collection: podcast_episodes
+    meta:
+      icon: podcast
+      note: "قسمت‌های پادکست"
+      display_template: "{{ title }}"
+      sort_field: publish_date
+      archive_field: status
+      archive_value: archived
+      unarchive_value: published
+    schema:
+      name: podcast_episodes
+    fields:
+      - field: id
+        type: uuid
+        meta: { hidden: true, readonly: true, special: [uuid] }
+        schema: { is_primary_key: true }
+      - field: status
+        type: string
+        meta: { interface: select-dropdown, options: { choices: [{ text: "منتشرشده", value: published }, { text: "پیش‌نویس", value: draft }, { text: "بایگانی", value: archived }] } }
+        schema: { default_value: draft, is_indexed: true }
+      - field: slug
+        type: string
+        meta: { interface: input, required: true }
+        schema: { is_unique: true, is_indexed: true }
+      - field: title
+        type: string
+        meta: { interface: input, required: true }
+      - field: episode_number
+        type: integer
+        meta: { interface: input, required: true }
+      - field: season
+        type: integer
+        meta: { interface: input }
+      - field: publish_date
+        type: date
+        meta: { interface: datetime, required: true }
+        schema: { is_indexed: true }
+      - field: short_description
+        type: text
+        meta: { interface: input-multiline, required: true }
+      - field: long_description
+        type: text
+        meta: { interface: input-rich-text-html }
+      - field: cover_image
+        type: uuid
+        meta: { interface: file-image, special: [file] }
+      - field: audio_file
+        type: uuid
+        meta: { interface: file, special: [file], required: true, note: "فایل صوتی (بارگذاری مستقیم)" }
+      - field: transcript
+        type: text
+        meta: { interface: input-rich-text-html }
+      - field: duration_seconds
+        type: integer
+        meta: { interface: input, required: true }
+      - field: contributors
+        type: json
+        meta: { interface: list-m2m, special: [m2m] }
+      - field: tags
+        type: json
+        meta: { interface: list-m2m, special: [m2m] }
+      - field: seo
+        type: json
+        meta: { interface: group-detail }
+      - field: seo_title
+        type: string
+        meta: { interface: input, width: half }
+      - field: seo_description
+        type: text
+        meta: { interface: input-multiline, width: half }
+      - field: seo_og_image
+        type: uuid
+        meta: { interface: file-image, special: [file], width: half }
+
+  - collection: interviews
+    meta:
+      icon: record_voice_over
+      note: "گفت‌وگوها"
+      display_template: "{{ title }}"
+      sort_field: recording_year
+      archive_field: status
+      archive_value: archived
+      unarchive_value: published
+    schema:
+      name: interviews
+    fields:
+      - field: id
+        type: uuid
+        meta: { hidden: true, readonly: true, special: [uuid] }
+        schema: { is_primary_key: true }
+      - field: status
+        type: string
+        meta: { interface: select-dropdown, options: { choices: [{ text: "منتشرشده", value: published }, { text: "پیش‌نویس", value: draft }, { text: "بایگانی", value: archived }] } }
+        schema: { default_value: draft, is_indexed: true }
+      - field: slug
+        type: string
+        meta: { interface: input, required: true }
+        schema: { is_unique: true, is_indexed: true }
+      - field: title
+        type: string
+        meta: { interface: input, required: true }
+      - field: interviewee_name
+        type: string
+        meta: { interface: input, required: true }
+      - field: recording_year
+        type: integer
+        meta: { interface: input, required: true }
+        schema: { is_indexed: true }
+      - field: publish_date
+        type: date
+        meta: { interface: datetime }
+      - field: featured_image
+        type: uuid
+        meta: { interface: file-image, special: [file] }
+      - field: video_file
+        type: uuid
+        meta: { interface: file, special: [file], note: "ویدیوی گفت‌وگو (بارگذاری مستقیم)" }
+      - field: summary
+        type: text
+        meta: { interface: input-multiline, required: true }
+      - field: transcript
+        type: text
+        meta: { interface: input-rich-text-html }
+      - field: field_of_study
+        type: string
+        meta: { interface: input }
+      - field: tags
+        type: json
+        meta: { interface: list-m2m, special: [m2m] }
+      - field: consent_confirmed
+        type: boolean
+        meta: { interface: boolean, required: true, note: "رضایت برای انتشار الزامی است" }
+        schema: { default_value: false }
+      - field: seo
+        type: json
+        meta: { interface: group-detail }
+      - field: seo_title
+        type: string
+        meta: { interface: input, width: half }
+      - field: seo_description
+        type: text
+        meta: { interface: input-multiline, width: half }
+      - field: seo_og_image
+        type: uuid
+        meta: { interface: file-image, special: [file], width: half }
+
+  # --- Settings -------------------------------------------------------------
+  - collection: site_settings
+    meta:
+      icon: settings
+      note: "تنظیمات سایت (تک‌رکورد)"
+      singleton: true
+    schema:
+      name: site_settings
+    fields:
+      - field: id
+        type: integer
+        meta: { hidden: true, readonly: true }
+        schema: { is_primary_key: true, has_auto_increment: true }
+      - field: site_name
+        type: string
+        meta: { interface: input, required: true }
+      - field: tagline
+        type: string
+        meta: { interface: input }
+      - field: introduction
+        type: text
+        meta: { interface: input-multiline }
+      - field: footer_text
+        type: text
+        meta: { interface: input-multiline }
+      - field: contact_email
+        type: string
+        meta: { interface: input }
+      - field: social_links
+        type: json
+        meta: { interface: list, options: { fields: [{ field: label, type: string }, { field: href, type: string }] } }
+      - field: featured_kind
+        type: string
+        meta: { interface: select-dropdown, options: { choices: [{ text: "رویداد", value: event }, { text: "مقاله", value: article }, { text: "پادکست", value: podcast }, { text: "گفت‌وگو", value: interview }] } }
+      - field: featured_slug
+        type: string
+        meta: { interface: input, note: "slug آیتم ویژه صفحه اصلی" }
+      - field: home_sections
+        type: json
+        meta: { interface: list, note: "بخش‌های صفحه اصلی (ترتیب و فعال/غیرفعال)" }
+
+  # --- Future Alumni module (created, not publicly exposed) -----------------
+  - collection: alumni_profiles
+    meta:
+      icon: school
+      note: "ماژول آینده — دانش‌آموختگان (منتشر نمی‌شود)"
+      display_template: "{{ display_name }}"
+    schema:
+      name: alumni_profiles
+    fields:
+      - field: id
+        type: uuid
+        meta: { hidden: true, readonly: true, special: [uuid] }
+        schema: { is_primary_key: true }
+      - field: display_name
+        type: string
+        meta: { interface: input, required: true }
+      - field: graduation_year
+        type: integer
+        meta: { interface: input }
+      - field: field_of_study
+        type: string
+        meta: { interface: input }
+      - field: bio
+        type: text
+        meta: { interface: input-multiline }
+      - field: consent_public
+        type: boolean
+        meta: { interface: boolean, note: "رضایت انتشار عمومی" }
+        schema: { default_value: false }
+      - field: contact
+        type: string
+        meta: { interface: input, note: "اطلاعات تماس (خصوصی)" }
+
+relations:
+  - collection: events
+    field: event_type
+    related_collection: event_types
+    meta: { many_collection: events, many_field: event_type, one_collection: event_types, one_field: null }
+    schema: { on_delete: SET NULL }
+
+  - collection: events
+    field: featured_image
+    related_collection: directus_files
+    meta: { many_collection: events, many_field: featured_image, one_collection: directus_files, one_field: null }
+    schema: { on_delete: SET NULL }
+
+  - collection: articles
+    field: featured_image
+    related_collection: directus_files
+    meta: { many_collection: articles, many_field: featured_image, one_collection: directus_files, one_field: null }
+    schema: { on_delete: SET NULL }
+
+  - collection: podcast_episodes
+    field: cover_image
+    related_collection: directus_files
+    meta: { many_collection: podcast_episodes, many_field: cover_image, one_collection: directus_files, one_field: null }
+    schema: { on_delete: SET NULL }
+
+  - collection: podcast_episodes
+    field: audio_file
+    related_collection: directus_files
+    meta: { many_collection: podcast_episodes, many_field: audio_file, one_collection: directus_files, one_field: null }
+    schema: { on_delete: SET NULL }
+
+  - collection: interviews
+    field: featured_image
+    related_collection: directus_files
+    meta: { many_collection: interviews, many_field: featured_image, one_collection: directus_files, one_field: null }
+    schema: { on_delete: SET NULL }
+
+  - collection: interviews
+    field: video_file
+    related_collection: directus_files
+    meta: { many_collection: interviews, many_field: video_file, one_collection: directus_files, one_field: null }
+    schema: { on_delete: SET NULL }

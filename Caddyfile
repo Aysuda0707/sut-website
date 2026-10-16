@@ -1,0 +1,16 @@
+# =============================================================================
+# Caddy reverse proxy with automatic HTTPS (Let's Encrypt).
+# Replace the domains below with your real hostnames before deploying.
+# =============================================================================
+
+# Public website
+{$PUBLIC_SITE_URL} {
+	encode zstd gzip
+	reverse_proxy web:3000
+}
+
+# Directus admin + API
+{$DIRECTUS_PUBLIC_URL} {
+	encode zstd gzip
+	reverse_proxy directus:8055
+}

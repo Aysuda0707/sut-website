@@ -1,0 +1,112 @@
+# =============================================================================
+# Production stack: PostgreSQL + Directus + Next.js (standalone) + Caddy (TLS)
+#
+# Usage on a clean VPS:
+#   cp .env.example .env      # fill in real secrets
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# Caddy terminates TLS automatically (Let's Encrypt) for the domains in
+# Caddyfile. Media binaries live in external S3-compatible storage
+# (e.g. Cloudflare R2) — not on this host — so redeploys never erase media.
+# =============================================================================
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: sut-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-directus}
+      POSTGRES_USER: ${POSTGRES_USER:-directus}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-directus} -d ${POSTGRES_DB:-directus}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sut-net
+
+  directus:
+    image: directus/directus:12.5.0
+    container_name: sut-directus
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      KEY: ${DIRECTUS_KEY:?DIRECTUS_KEY is required}
+      SECRET: ${DIRECTUS_SECRET:?DIRECTUS_SECRET is required}
+      ADMIN_EMAIL: ${DIRECTUS_ADMIN_EMAIL:?DIRECTUS_ADMIN_EMAIL is required}
+      ADMIN_PASSWORD: ${DIRECTUS_ADMIN_PASSWORD:?DIRECTUS_ADMIN_PASSWORD is required}
+      PUBLIC_URL: ${DIRECTUS_PUBLIC_URL:?DIRECTUS_PUBLIC_URL is required}
+      DB_CLIENT: pg
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: ${POSTGRES_DB:-directus}
+      DB_USER: ${POSTGRES_USER:-directus}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      # --- External S3-compatible storage (Cloudflare R2 / Backblaze B2 / AWS) ---
+      STORAGE_LOCATIONS: s3
+      STORAGE_S3_DRIVER: s3
+      STORAGE_S3_KEY: ${STORAGE_S3_ACCESS_KEY}
+      STORAGE_S3_SECRET: ${STORAGE_S3_SECRET_KEY}
+      STORAGE_S3_BUCKET: ${STORAGE_S3_BUCKET}
+      STORAGE_S3_REGION: ${STORAGE_S3_REGION:-auto}
+      STORAGE_S3_ENDPOINT: ${STORAGE_S3_ENDPOINT}
+      STORAGE_S3_FORCE_PATH_STYLE: ${STORAGE_S3_FORCE_PATH_STYLE:-false}
+      FILES_MAX_UPLOAD: ${MEDIA_MAX_VIDEO_MB:-2048}mb
+      CORS_ENABLED: "true"
+      CORS_ORIGIN: ${PUBLIC_SITE_URL:?PUBLIC_SITE_URL is required}
+      TELEMETRY: "false"
+    volumes:
+      - ./cms/extensions:/directus/extensions
+      - ./cms/snapshots:/directus/snapshots
+    networks:
+      - sut-net
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sut-web
+    restart: unless-stopped
+    depends_on:
+      - directus
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_SITE_URL: ${PUBLIC_SITE_URL}
+      NEXT_PUBLIC_SITE_NAME: ${NEXT_PUBLIC_SITE_NAME}
+      DIRECTUS_URL: http://directus:8055
+      DIRECTUS_STATIC_TOKEN: ${DIRECTUS_STATIC_TOKEN}
+      DIRECTUS_PREVIEW_TOKEN: ${DIRECTUS_PREVIEW_TOKEN}
+    networks:
+      - sut-net
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: sut-caddy
+    restart: unless-stopped
+    depends_on:
+      - web
+      - directus
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - sut-net
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  sut-net:
+    driver: bridge

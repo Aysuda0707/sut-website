@@ -1,0 +1,35 @@
+{
+  "name": "sut-azerbaijan-archive",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Persian-first cultural media archive for the Azerbaijan student group at Sharif University of Technology.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@directus/sdk": "^20.0.0",
+    "next": "16.4.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.2.7"
+  },
+  "overrides": {
+    "tinypool": "^2.2.0",
+    "@vitest/mocker": "^4.1.11"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
