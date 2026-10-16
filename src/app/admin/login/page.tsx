@@ -1,14 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 /**
  * Admin login. Posts the password to /api/admin/login, which sets an
  * HMAC-signed session cookie. On success we navigate to the dashboard.
  */
 export default function AdminLoginPage() {
-  const router = useRouter();
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -28,8 +26,11 @@ export default function AdminLoginPage() {
         setError(data.error ?? "ورود ناموفق بود.");
         return;
       }
-      router.replace("/admin");
-      router.refresh();
+      // Full navigation (not router.replace) so the browser sends the
+      // freshly-set session cookie with the request for /admin. A client-side
+      // transition can race the Set-Cookie header on some hosts, which made
+      // the panel bounce straight back to the login page.
+      window.location.assign("/admin");
     } catch {
       setError("خطای شبکه. دوباره تلاش کنید.");
     } finally {
