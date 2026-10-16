@@ -28,23 +28,25 @@ export default async function GalleryPage() {
           <p>هنوز رسانه‌ای منتشر نشده است.</p>
         ) : (
           <ul className={styles.grid}>
-            {items.map((item) => (
-              <li key={item.asset.id} className={styles.item}>
-                <Link href={item.sourceHref} className={styles.link}>
-                  <div className={styles.media}>
-                    <Image
-                      src={item.asset.url}
-                      alt={item.asset.alt}
-                      fill
-                      sizes="(max-width: 640px) 100vw, (max-width: 1000px) 50vw, 25vw"
-                      className={styles.image}
-                      unoptimized={item.asset.url.startsWith("data:")}
-                    />
-                  </div>
-                  <span className={styles.caption}>{item.sourceTitle}</span>
-                </Link>
-              </li>
-            ))}
+            {items
+              .filter((item) => Boolean(item.asset?.url))
+              .map((item) => (
+                <li key={item.asset.id} className={styles.item}>
+                  <Link href={item.sourceHref} className={styles.link}>
+                    <div className={styles.media}>
+                      <Image
+                        src={item.asset.url}
+                        alt={item.asset.alt || item.sourceTitle}
+                        fill
+                        sizes="(max-width: 640px) 100vw, (max-width: 1000px) 50vw, 25vw"
+                        className={styles.image}
+                        unoptimized={item.asset.url.startsWith("data:")}
+                      />
+                    </div>
+                    <span className={styles.caption}>{item.sourceTitle}</span>
+                  </Link>
+                </li>
+              ))}
           </ul>
         )}
       </Container>

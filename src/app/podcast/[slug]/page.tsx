@@ -29,7 +29,7 @@ export async function generateMetadata({
     openGraph: {
       title: ep.title,
       description: ep.shortDescription,
-      images: [{ url: ep.coverImage.url }],
+      ...(ep.coverImage?.url ? { images: [{ url: ep.coverImage.url }] } : {}),
     },
   };
 }
@@ -51,17 +51,19 @@ export default async function PodcastEpisodePage({
       <Container>
         <article className={styles.article}>
           <div className={styles.top}>
-            <div className={styles.cover}>
-              <Image
-                src={episode.coverImage.url}
-                alt={episode.coverImage.alt}
-                width={episode.coverImage.width ?? 1200}
-                height={episode.coverImage.height ?? 1200}
-                className={styles.coverImage}
-                priority
-                unoptimized={episode.coverImage.url.startsWith("data:")}
-              />
-            </div>
+            {episode.coverImage?.url && (
+              <div className={styles.cover}>
+                <Image
+                  src={episode.coverImage.url}
+                  alt={episode.coverImage.alt || episode.title}
+                  width={episode.coverImage.width ?? 1200}
+                  height={episode.coverImage.height ?? 1200}
+                  className={styles.coverImage}
+                  priority
+                  unoptimized={episode.coverImage.url.startsWith("data:")}
+                />
+              </div>
+            )}
             <div className={styles.info}>
               <div className={styles.badges}>
                 <Badge tone="gold">قسمت {formatYear(episode.episodeNumber)}</Badge>
@@ -75,13 +77,15 @@ export default async function PodcastEpisodePage({
             </div>
           </div>
 
-          <div className={styles.playerWrap}>
-            <AudioPlayer
-              src={episode.audioFile.url}
-              title={episode.title}
-              durationSeconds={episode.durationSeconds}
-            />
-          </div>
+          {episode.audioFile?.url && (
+            <div className={styles.playerWrap}>
+              <AudioPlayer
+                src={episode.audioFile.url}
+                title={episode.title}
+                durationSeconds={episode.durationSeconds}
+              />
+            </div>
+          )}
 
           <div
             className={styles.body}

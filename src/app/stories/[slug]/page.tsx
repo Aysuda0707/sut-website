@@ -32,7 +32,9 @@ export async function generateMetadata({
     openGraph: {
       title: article.title,
       description: article.summary,
-      images: [{ url: article.featuredImage.url }],
+      ...(article.featuredImage?.url
+        ? { images: [{ url: article.featuredImage.url }] }
+        : {}),
     },
   };
 }
@@ -65,17 +67,19 @@ export default async function ArticleDetailPage({
             <p className={styles.summary}>{article.summary}</p>
           </header>
 
-          <figure className={styles.heroFigure}>
-            <Image
-              src={article.featuredImage.url}
-              alt={article.featuredImage.alt}
-              width={article.featuredImage.width ?? 1600}
-              height={article.featuredImage.height ?? 1000}
-              className={styles.heroImage}
-              priority
-              unoptimized={article.featuredImage.url.startsWith("data:")}
-            />
-          </figure>
+          {article.featuredImage?.url && (
+            <figure className={styles.heroFigure}>
+              <Image
+                src={article.featuredImage.url}
+                alt={article.featuredImage.alt || article.title}
+                width={article.featuredImage.width ?? 1600}
+                height={article.featuredImage.height ?? 1000}
+                className={styles.heroImage}
+                priority
+                unoptimized={article.featuredImage.url.startsWith("data:")}
+              />
+            </figure>
+          )}
 
           <div
             className={styles.body}

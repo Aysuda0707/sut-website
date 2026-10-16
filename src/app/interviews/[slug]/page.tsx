@@ -28,7 +28,9 @@ export async function generateMetadata({
     openGraph: {
       title: interview.title,
       description: interview.summary,
-      images: [{ url: interview.featuredImage.url }],
+      ...(interview.featuredImage?.url
+        ? { images: [{ url: interview.featuredImage.url }] }
+        : {}),
     },
   };
 }
@@ -66,11 +68,13 @@ export default async function InterviewDetailPage({
             )}
           </header>
 
-          <VideoPlayer
-            src={interview.videoFile.url}
-            poster={interview.videoFile.thumbnailUrl}
-            title={interview.title}
-          />
+          {interview.videoFile?.url && (
+            <VideoPlayer
+              src={interview.videoFile.url}
+              poster={interview.videoFile.thumbnailUrl}
+              title={interview.title}
+            />
+          )}
 
           <p className={styles.summary}>{interview.summary}</p>
 

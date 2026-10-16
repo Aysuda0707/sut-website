@@ -7,7 +7,8 @@ export interface ContentCardProps {
   href: string;
   title: string;
   summary: string;
-  image: MediaAsset;
+  /** Optional: records created without an uploaded image render a placeholder. */
+  image?: MediaAsset | null;
   meta?: string;
   eyebrow?: string;
   /** Larger, image-forward variant for featured/hero placements. */
@@ -23,6 +24,7 @@ export function ContentCard({
   eyebrow,
   variant = "default",
 }: ContentCardProps) {
+  const hasImage = Boolean(image?.url);
   return (
     <article
       className={[styles.card, variant === "featured" ? styles.featured : ""]
@@ -31,14 +33,20 @@ export function ContentCard({
     >
       <Link href={href} className={styles.link}>
         <div className={styles.media}>
-          <Image
-            src={image.url}
-            alt={image.alt}
-            fill
-            sizes="(max-width: 700px) 100vw, (max-width: 1100px) 50vw, 33vw"
-            className={styles.image}
-            unoptimized={image.url.startsWith("data:")}
-          />
+          {hasImage ? (
+            <Image
+              src={image!.url}
+              alt={image!.alt || title}
+              fill
+              sizes="(max-width: 700px) 100vw, (max-width: 1100px) 50vw, 33vw"
+              className={styles.image}
+              unoptimized={image!.url.startsWith("data:")}
+            />
+          ) : (
+            <div className={styles.placeholder} aria-hidden="true">
+              <span className={styles.placeholderMark}>آ</span>
+            </div>
+          )}
         </div>
         <div className={styles.body}>
           {eyebrow && <p className={styles.eyebrow}>{eyebrow}</p>}

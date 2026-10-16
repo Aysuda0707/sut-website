@@ -33,6 +33,26 @@
   object-fit: cover;
 }
 
+.placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(
+    135deg,
+    var(--color-surface-alt),
+    var(--color-surface)
+  );
+}
+
+.placeholderMark {
+  font-size: clamp(2rem, 6vw, 3.5rem);
+  font-weight: 700;
+  color: var(--color-gold);
+  opacity: 0.5;
+}
+
 .body {
   padding: var(--space-5);
   display: flex;
